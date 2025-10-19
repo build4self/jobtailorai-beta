@@ -1,0 +1,12 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Word Document Icon - Flaticon style -->
+  <path d="M20 2H6C4.9 2 4 2.9 4 4V28C4 29.1 4.9 30 6 30H26C27.1 30 28 29.1 28 28V10L20 2Z" fill="#2B579A"/>
+  <path d="M20 2V10H28" fill="#4472C4"/>
+  <path d="M20 2L28 10H20V2Z" fill="#1B4F8C"/>
+  
+  <!-- Word "W" Icon -->
+  <path d="M10 14L12 22L14 18L16 22L18 14H20L17 24H15L14 20L13 24H11L8 14H10Z" fill="white"/>
+  
+  <!-- Word Label -->
+  <text x="16" y="13" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="7" font-weight="bold">WORD</text>
+</svg>

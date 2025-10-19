@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Newsletter sender infrastructure for JobTailorAI'
+
+Parameters:
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID
+  SenderEmail:
+    Type: String
+    Description: Verified SES sender email address
+    Default: noreply@jobtailorai.com
+
+Resources:
+  NewsletterSenderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: NewsletterSenderPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:ListUsers
+                Resource: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}'
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+
+  NewsletterSenderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: newsletter-sender
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt NewsletterSenderRole.Arn
+      Code:
+        ZipFile: |
+          # Placeholder - will be updated during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder'}
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPoolId
+          SENDER_EMAIL: !Ref SenderEmail
+      Timeout: 300
+      MemorySize: 512
+
+  NewsletterApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: newsletter-api
+      Description: API for sending newsletters
+
+  NewsletterResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref NewsletterApi
+      ParentId: !GetAtt NewsletterApi.RootResourceId
+      PathPart: send-newsletter
+
+  NewsletterMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref NewsletterApi
+      ResourceId: !Ref NewsletterResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NewsletterSenderFunction.Arn}/invocations'
+
+  NewsletterApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: NewsletterMethod
+    Properties:
+      RestApiId: !Ref NewsletterApi
+      StageName: prod
+
+  LambdaApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref NewsletterSenderFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub '${NewsletterApi}/*/POST/send-newsletter'
+
+Outputs:
+  NewsletterApiUrl:
+    Description: Newsletter API endpoint URL
+    Value: !Sub 'https://${NewsletterApi}.execute-api.${AWS::Region}.amazonaws.com/prod/send-newsletter'
+  
+  LambdaFunctionArn:
+    Description: Newsletter sender Lambda function ARN
+    Value: !GetAtt NewsletterSenderFunction.Arn

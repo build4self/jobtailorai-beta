@@ -1,0 +1,25 @@
+{
+  "short_name": "JobTailorAI",
+  "name": "JobTailorAI - AI-powered resume optimization",
+  "icons": [
+    {
+      "src": "favicon-text.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "logo192-text.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512-text.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

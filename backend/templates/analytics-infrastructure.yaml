@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Analytics infrastructure for JobTailorAI click stream tracking'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'prod'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: 'Environment name'
+
+Resources:
+  # DynamoDB Table for Analytics
+  ClickAnalyticsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'JobTailorAI-ClickAnalytics-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: date
+          AttributeType: S
+        - AttributeName: timestamp_session
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: buttonClicked
+          AttributeType: S
+      KeySchema:
+        - AttributeName: date
+          KeyType: HASH
+        - AttributeName: timestamp_session
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: timestamp_session
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: ButtonClickedIndex
+          KeySchema:
+            - AttributeName: buttonClicked
+              KeyType: HASH
+            - AttributeName: timestamp_session
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: JobTailorAI
+        - Key: Component
+          Value: Analytics
+
+  # IAM Role for Analytics Lambda
+  AnalyticsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'JobTailorAI-Analytics-Lambda-Role-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AnalyticsDynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt ClickAnalyticsTable.Arn
+                  - !Sub '${ClickAnalyticsTable.Arn}/index/*'
+
+  # Analytics Lambda Function
+  AnalyticsLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'JobTailorAI-Analytics-Handler-${Environment}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt AnalyticsLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          from datetime import datetime
+          
+          dynamodb = boto3.resource('dynamodb')
+          table_name = os.environ.get('ANALYTICS_TABLE_NAME')
+          
+          def lambda_handler(event, context):
+              # Placeholder - replace with actual code
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'message': 'Analytics handler placeholder'})
+              }
+      Environment:
+        Variables:
+          ANALYTICS_TABLE_NAME: !Ref ClickAnalyticsTable
+      Timeout: 30
+      MemorySize: 256
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: JobTailorAI
+        - Key: Component
+          Value: Analytics
+
+  # API Gateway for Analytics
+  AnalyticsApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub 'JobTailorAI-Analytics-API-${Environment}'
+      Description: 'API for JobTailorAI click stream analytics'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Analytics Resource
+  AnalyticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AnalyticsApi
+      ParentId: !GetAtt AnalyticsApi.RootResourceId
+      PathPart: analytics
+
+  # OPTIONS Method for CORS
+  AnalyticsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AnalyticsApi
+      ResourceId: !Ref AnalyticsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  # POST Method for Analytics
+  AnalyticsPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AnalyticsApi
+      ResourceId: !Ref AnalyticsResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AnalyticsLambdaFunction.Arn}/invocations'
+
+  # Lambda Permission for API Gateway
+  AnalyticsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AnalyticsLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AnalyticsApi}/*/*'
+
+  # API Gateway Deployment
+  AnalyticsApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - AnalyticsOptionsMethod
+      - AnalyticsPostMethod
+    Properties:
+      RestApiId: !Ref AnalyticsApi
+      StageName: !Ref Environment
+
+Outputs:
+  AnalyticsTableName:
+    Description: 'Name of the DynamoDB table for analytics'
+    Value: !Ref ClickAnalyticsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-AnalyticsTable'
+
+  AnalyticsApiEndpoint:
+    Description: 'API Gateway endpoint for analytics'
+    Value: !Sub 'https://${AnalyticsApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-AnalyticsEndpoint'
+
+  AnalyticsLambdaFunctionArn:
+    Description: 'ARN of the analytics Lambda function'
+    Value: !GetAtt AnalyticsLambdaFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AnalyticsLambdaArn'

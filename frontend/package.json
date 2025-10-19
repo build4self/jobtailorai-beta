@@ -1,0 +1,48 @@
+{
+  "name": "resume-optimizer-frontend",
+  "version": "1.0.0",
+  "description": "AI-powered resume optimization tool - Frontend",
+  "private": true,
+  "dependencies": {
+    "@aws-amplify/ui-react": "^6.11.2",
+    "@emailjs/browser": "^4.4.1",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.0",
+    "@mui/material": "^5.14.0",
+    "aws-amplify": "^6.15.4",
+    "framer-motion": "^10.16.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.0",
+    "react-router-dom": "^6.30.1",
+    "react-scripts": "5.0.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "test-production": "npm run build && serve -s build -l 3000",
+    "test-production-advanced": "../test-production-advanced.sh"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "homepage": "."
+}

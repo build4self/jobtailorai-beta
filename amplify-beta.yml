@@ -1,0 +1,21 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd frontend
+        - npm ci
+        # Copy beta environment variables
+        - cp .env.beta .env
+        - echo "Using beta environment configuration"
+        - cat .env
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: frontend/build
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - frontend/node_modules/**/*

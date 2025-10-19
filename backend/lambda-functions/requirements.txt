@@ -1,0 +1,15 @@
+# Resume Optimizer Lambda Dependencies
+# These are optional dependencies that can enhance functionality
+# The application works with built-in libraries only
+
+# PDF processing (optional - fallback to Amazon Textract)
+PyPDF2==3.0.1
+
+# Word document processing (optional - fallback to built-in zipfile)
+python-docx==0.8.11
+
+# Text extraction (optional - fallback to built-in methods)
+textract==1.6.5
+
+# Note: The application is designed to work without these dependencies
+# using built-in Python libraries and AWS services as fallbacks

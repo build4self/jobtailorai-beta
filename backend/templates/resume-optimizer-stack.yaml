@@ -1,0 +1,904 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Resume Optimization Website Backend Resources'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+      - beta
+    Description: Environment name
+
+Resources:
+  # Storage Layer
+  ResumeStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'resume-optimizer-storage-${AWS::AccountId}-${Environment}'
+      VersioningConfiguration:
+        Status: Enabled
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3000
+
+  UserHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ResumeOptimizerUserHistory-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: jobId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: jobId
+          KeyType: RANGE
+
+  # Skills Database Table
+  SkillsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'resume-optimizer-skills-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: skill_id
+          AttributeType: S
+        - AttributeName: skill_name_lower
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+      KeySchema:
+        - AttributeName: skill_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: skill-name-index
+          KeySchema:
+            - AttributeName: skill_name_lower
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: category-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: ResumeOptimizer
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Authentication Layer
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub 'ResumeOptimizerUserPool-${Environment}'
+      AutoVerifiedAttributes:
+        - email
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailSubject: "Welcome to JobTailorAI - Verify Your Email Address"
+        EmailMessage: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Welcome to JobTailorAI</title>
+          </head>
+          <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; line-height: 1.6;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                  
+                  <!-- Header -->
+                  <div style="background: linear-gradient(135deg, #0A66C2 0%, #378FE9 100%); padding: 40px 30px; text-align: center;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                          ✨ JobTailorAI
+                      </h1>
+                      <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px; font-weight: 400;">
+                          AI-Powered Resume Crafting
+                      </p>
+                  </div>
+                  
+                  <!-- Content -->
+                  <div style="padding: 40px 30px;">
+                      <h2 style="color: #111827; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+                          Welcome to JobTailorAI! 🎉
+                      </h2>
+                      
+                      <p style="color: #374151; margin: 0 0 25px 0; font-size: 16px;">
+                          Thank you for joining thousands of professionals who are transforming their careers with AI-crafted resumes. You're just one step away from landing your dream job!
+                      </p>
+                      
+                      <!-- Verification Code Box -->
+                      <div style="background-color: #f8fafc; border: 2px solid #0A66C2; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
+                          <p style="color: #0A66C2; margin: 0 0 10px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                              Your Verification Code
+                          </p>
+                          <div style="font-size: 32px; font-weight: 700; color: #0A66C2; letter-spacing: 4px; font-family: 'Courier New', monospace;">
+                              {####}
+                          </div>
+                          <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 14px;">
+                              Enter this code on the verification page to activate your account
+                          </p>
+                      </div>
+                      
+                      <!-- Features -->
+                      <div style="margin: 35px 0;">
+                          <h3 style="color: #111827; margin: 0 0 20px 0; font-size: 18px; font-weight: 600;">
+                              🚀 What you can do with JobTailorAI:
+                          </h3>
+                          <ul style="color: #374151; margin: 0; padding-left: 20px; font-size: 15px;">
+                              <li style="margin-bottom: 8px;"><strong>Real-Time Preview:</strong> See your crafted resume instantly</li>
+                              <li style="margin-bottom: 8px;"><strong>Side-by-Side Compare:</strong> Compare original vs optimized versions</li>
+                              <li style="margin-bottom: 8px;"><strong>Multiple Formats:</strong> Download in Word or text format</li>
+                              <li style="margin-bottom: 8px;"><strong>ATS Optimization:</strong> Pass Applicant Tracking Systems with ease</li>
+                              <li style="margin-bottom: 8px;"><strong>Job-Specific Tailoring:</strong> Each resume crafted for specific roles</li>
+                          </ul>
+                      </div>
+                      
+                      <!-- CTA Button -->
+                      <div style="text-align: center; margin: 35px 0;">
+                          <a href="https://main.d3tjpmlvy19b2l.amplifyapp.com/auth" style="display: inline-block; background: linear-gradient(135deg, #0A66C2 0%, #378FE9 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(10, 102, 194, 0.3);">
+                              Verify Email & Get Started →
+                          </a>
+                      </div>
+                      
+                      <!-- Stats -->
+                      <div style="background-color: #f8fafc; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center;">
+                          <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
+                              <div style="margin: 10px;">
+                                  <div style="font-size: 24px; font-weight: 700; color: #0A66C2;">3x</div>
+                                  <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">More Interviews</div>
+                              </div>
+                              <div style="margin: 10px;">
+                                  <div style="font-size: 24px; font-weight: 700; color: #0A66C2;">95%</div>
+                                  <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">ATS Compatible</div>
+                              </div>
+                              <div style="margin: 10px;">
+                                  <div style="font-size: 24px; font-weight: 700; color: #0A66C2;">30s</div>
+                                  <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Processing Time</div>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <p style="color: #6b7280; margin: 25px 0 0 0; font-size: 14px; line-height: 1.5;">
+                          <strong>Didn't create this account?</strong> No worries! You can safely ignore this email, and no account will be created.
+                      </p>
+                  </div>
+                  
+                  <!-- Footer -->
+                  <div style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                      <p style="color: #6b7280; margin: 0 0 15px 0; font-size: 14px;">
+                          Best regards,<br>
+                          <strong style="color: #0A66C2;">The JobTailorAI Team</strong>
+                      </p>
+                      
+                      <div style="margin: 20px 0;">
+                          <a href="https://main.d3tjpmlvy19b2l.amplifyapp.com" style="color: #0A66C2; text-decoration: none; font-size: 14px; margin: 0 15px;">🌐 Website</a>
+                          <a href="mailto:support@jobtailorai.com" style="color: #0A66C2; text-decoration: none; font-size: 14px; margin: 0 15px;">📧 Support</a>
+                          <a href="https://main.d3tjpmlvy19b2l.amplifyapp.com" style="color: #0A66C2; text-decoration: none; font-size: 14px; margin: 0 15px;">❓ Help</a>
+                      </div>
+                      
+                      <p style="color: #9ca3af; margin: 15px 0 0 0; font-size: 12px;">
+                          © 2024 JobTailorAI. All rights reserved.<br>
+                          Crafting careers with AI technology.
+                      </p>
+                  </div>
+              </div>
+          </body>
+          </html>
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub 'ResumeOptimizerWebClient-${Environment}'
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  # Processing Layer
+  AIHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: AIHandlerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource: !Sub '${ResumeStorageBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:PutItem'
+                Resource: !GetAtt UserHistoryTable.Arn
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:Query'
+                  - 'dynamodb:Scan'
+                  - 'dynamodb:BatchGetItem'
+                  - 'dynamodb:BatchWriteItem'
+                Resource:
+                  - !GetAtt SkillsTable.Arn
+                  - !Sub '${SkillsTable.Arn}/index/*'
+              - Effect: Allow
+                Action:
+                  - 'bedrock:InvokeModel'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'textract:DetectDocumentText'
+                  - 'textract:AnalyzeDocument'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                Resource: !GetAtt JobUrlExtractorLambda.Arn
+
+  ResumeProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: ResumeProcessorPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                Resource: !Sub '${ResumeStorageBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                Resource: !Sub '${ResumeStorageBucket.Arn}'
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                Resource: '*'  # Will be updated after AIHandlerLambda is created
+
+  AIHandlerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ResumeOptimizerAIHandler-${Environment}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt AIHandlerRole.Arn
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          STORAGE_BUCKET: !Ref ResumeStorageBucket
+          USER_HISTORY_TABLE: !Ref UserHistoryTable
+          SKILLS_TABLE: !Ref SkillsTable
+          JOB_URL_EXTRACTOR_FUNCTION: !Ref JobUrlExtractorLambda
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced with actual code
+
+  ResumeProcessorLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ResumeOptimizerProcessor-${Environment}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt ResumeProcessorRole.Arn
+      Timeout: 180
+      MemorySize: 512
+      Environment:
+        Variables:
+          STORAGE_BUCKET: !Ref ResumeStorageBucket
+          AI_HANDLER_FUNCTION: !Ref AIHandlerLambda
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced with actual code
+
+  # Update Resume Processor Role with specific Lambda ARN
+  ResumeProcessorRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: InvokeAIHandlerPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'lambda:InvokeFunction'
+            Resource: !GetAtt AIHandlerLambda.Arn
+      Roles:
+        - !Ref ResumeProcessorRole
+
+  # Contact Handler Lambda Function
+  ContactHandlerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ResumeOptimizerContactHandler-${Environment}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt ContactHandlerRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import logging
+          from datetime import datetime
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          ses_client = boto3.client('ses', region_name='us-east-1')
+
+          def lambda_handler(event, context):
+              headers = {
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                  'Access-Control-Allow-Methods': 'POST,OPTIONS'
+              }
+              
+              try:
+                  if event['httpMethod'] == 'OPTIONS':
+                      return {
+                          'statusCode': 200,
+                          'headers': headers,
+                          'body': json.dumps({'message': 'CORS preflight'})
+                      }
+                  
+                  body = json.loads(event['body'])
+                  from_name = body.get('fromName', 'Unknown User')
+                  from_email = body.get('fromEmail', 'unknown@example.com')
+                  subject = body.get('subject', 'No Subject')
+                  message = body.get('message', 'No Message')
+                  timestamp = body.get('timestamp', datetime.now().isoformat())
+                  
+                  if not subject.strip() or not message.strip():
+                      return {
+                          'statusCode': 400,
+                          'headers': headers,
+                          'body': json.dumps({'error': 'Subject and message are required'})
+                      }
+                  
+                  email_subject = f"JobTailorAI Contact: {subject}"
+                  email_body = f"Contact Form Submission from JobTailorAI\\n\\nFrom: {from_name} ({from_email})\\nSubject: {subject}\\n\\nMessage:\\n{message}\\n\\n---\\nSent from JobTailorAI Contact Form\\nTime: {timestamp}"
+                  
+                  try:
+                      response = ses_client.send_email(
+                          Source='abidshariff009@gmail.com',
+                          Destination={
+                              'ToAddresses': ['abidshariff009@gmail.com']
+                          },
+                          Message={
+                              'Subject': {
+                                  'Data': email_subject,
+                                  'Charset': 'UTF-8'
+                              },
+                              'Body': {
+                                  'Text': {
+                                      'Data': email_body,
+                                      'Charset': 'UTF-8'
+                                  }
+                              }
+                          },
+                          ReplyToAddresses=[from_email] if from_email != 'unknown@example.com' else []
+                      )
+                      logger.info(f"Email sent successfully. MessageId: {response['MessageId']}")
+                  except Exception as ses_error:
+                      logger.error(f"SES Error: {str(ses_error)}")
+                  
+                  logger.info(f"Contact form submitted by {from_name} ({from_email}): {subject}")
+                  
+                  return {
+                      'statusCode': 200,
+                      'headers': headers,
+                      'body': json.dumps({
+                          'message': 'Contact form submitted successfully',
+                          'timestamp': timestamp
+                      })
+                  }
+                  
+              except Exception as e:
+                  logger.error(f"Error: {str(e)}")
+                  return {
+                      'statusCode': 500,
+                      'headers': headers,
+                      'body': json.dumps({'error': 'Internal server error'})
+                  }
+      Timeout: 30
+      MemorySize: 128
+
+  # Contact Handler Lambda Role
+  ContactHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SESPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ses:SendEmail'
+                  - 'ses:SendRawEmail'
+                Resource: '*'
+
+  # Job URL Extractor Lambda Function
+  JobUrlExtractorLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ResumeOptimizerJobUrlExtractor-${Environment}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt JobUrlExtractorRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced with actual code
+
+  # Job URL Extractor Lambda Role
+  JobUrlExtractorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: JobUrlExtractorPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+
+  # Status Checker Lambda Function
+  StatusCheckerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ResumeOptimizerStatusChecker-${Environment}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt StatusCheckerRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          STORAGE_BUCKET: !Ref ResumeStorageBucket
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced with actual code
+
+  # Status Checker Lambda Role
+  StatusCheckerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: StatusCheckerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                Resource: !Sub '${ResumeStorageBucket.Arn}/*'
+
+  # API Layer
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub 'ResumeOptimizerAPI-${Environment}'
+      Description: API for JobTailorAI application
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: ResumeOptimizerCognitoAuthorizer
+      RestApiId: !Ref ApiGateway
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      ProviderARNs:
+        - !GetAtt UserPool.Arn
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: optimize
+
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ResumeProcessorLambda.Arn}/invocations'
+      
+  ApiGatewayOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET,PUT,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: '{}'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Status endpoint resource
+  ApiGatewayStatusResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: status
+
+  # Status endpoint GET method
+  ApiGatewayStatusMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayStatusResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StatusCheckerLambda.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Status endpoint OPTIONS method for CORS
+  ApiGatewayStatusOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayStatusResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            ResponseTemplates:
+              application/json: '{}'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  # Contact endpoint resource
+  ApiGatewayContactResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: contact
+
+  # Contact endpoint POST method
+  ApiGatewayContactMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayContactResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ContactHandlerLambda.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Contact endpoint OPTIONS method for CORS
+  ApiGatewayContactOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayContactResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            ResponseTemplates:
+              application/json: '{}'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  # Job URL Extractor endpoint resource
+  ApiGatewayJobUrlExtractorResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: extract-job-url
+
+  # Job URL Extractor endpoint POST method
+  ApiGatewayJobUrlExtractorMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayJobUrlExtractorResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${JobUrlExtractorLambda.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Job URL Extractor endpoint OPTIONS method for CORS
+  ApiGatewayJobUrlExtractorOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ApiGatewayJobUrlExtractorResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: 
+      - ApiGatewayMethod
+      - ApiGatewayOptionsMethod
+      - ApiGatewayStatusMethod
+      - ApiGatewayStatusOptionsMethod
+      - ApiGatewayContactMethod
+      - ApiGatewayContactOptionsMethod
+      - ApiGatewayJobUrlExtractorMethod
+      - ApiGatewayJobUrlExtractorOptionsMethod
+    Properties:
+      RestApiId: !Ref ApiGateway
+      StageName: !Ref Environment
+      Description: !Sub 'Deployment with contact endpoint - ${AWS::StackName}'
+
+  # Gateway Responses for CORS on errors
+  ApiGatewayUnauthorizedResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: UNAUTHORIZED
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET'"
+
+  ApiGatewayForbiddenResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: ACCESS_DENIED
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET'"
+
+  ApiGatewayDefaultResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: DEFAULT_4XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET'"
+
+  ApiGatewayDefault5XXResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: DEFAULT_5XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET'"
+
+  # Lambda permissions for API Gateway
+  ResumeProcessorPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ResumeProcessorLambda
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/optimize'
+
+  # Permission for API Gateway to invoke Status Checker Lambda
+  LambdaApiGatewayStatusPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StatusCheckerLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/GET/status'
+
+  # Permission for API Gateway to invoke Contact Handler Lambda
+  ContactHandlerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ContactHandlerLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/contact'
+
+  # Permission for API Gateway to invoke Job URL Extractor Lambda
+  JobUrlExtractorPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref JobUrlExtractorLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/extract-job-url'
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+  
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+  
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient
+  
+  StorageBucket:
+    Description: S3 Bucket for resume storage
+    Value: !Ref ResumeStorageBucket
