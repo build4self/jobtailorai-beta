@@ -43,6 +43,21 @@ const config = {
 
 // Validation function to check if all required config is present
 export const validateConfig = () => {
+  Logger.info('🔧 Validating configuration...');
+  Logger.info('📊 Current environment variables:');
+  Logger.info('  REACT_APP_AWS_REGION:', process.env.REACT_APP_AWS_REGION);
+  Logger.info('  REACT_APP_USER_POOL_ID:', process.env.REACT_APP_USER_POOL_ID);
+  Logger.info('  REACT_APP_USER_POOL_WEB_CLIENT_ID:', process.env.REACT_APP_USER_POOL_WEB_CLIENT_ID);
+  Logger.info('  REACT_APP_API_ENDPOINT:', process.env.REACT_APP_API_ENDPOINT);
+  Logger.info('  REACT_APP_ENVIRONMENT:', process.env.REACT_APP_ENVIRONMENT);
+  Logger.info('  REACT_APP_TEST_MODE:', process.env.REACT_APP_TEST_MODE);
+  
+  Logger.info('🏗️ Final configuration:');
+  Logger.info('  Auth Region:', config.Auth.region);
+  Logger.info('  User Pool ID:', config.Auth.userPoolId);
+  Logger.info('  Client ID:', config.Auth.userPoolWebClientId);
+  Logger.info('  API Endpoint:', config.API.REST.resumeOptimizer.endpoint);
+  
   const errors = [];
   
   if (!config.Auth.userPoolId) {
@@ -58,10 +73,11 @@ export const validateConfig = () => {
   }
   
   if (errors.length > 0) {
-    Logger.error('Configuration errors:', errors);
+    Logger.error('❌ Configuration errors:', errors);
     return false;
   }
   
+  Logger.info('✅ Configuration validation passed');
   return true;
 };
 

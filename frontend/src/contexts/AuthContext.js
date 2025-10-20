@@ -23,14 +23,18 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthState = async () => {
     try {
+      Logger.info('🔍 Checking authentication state...');
       const currentUser = await getCurrentUser();
+      Logger.info('✅ User authenticated:', currentUser.username);
       setUser(currentUser);
       setIsAuthenticated(true);
     } catch (error) {
+      Logger.info('❌ User not authenticated:', error.message);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
+      Logger.info('🏁 Auth state check complete');
     }
   };
 

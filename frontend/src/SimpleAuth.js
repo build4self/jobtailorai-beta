@@ -139,7 +139,16 @@ function SimpleAuth() {
     setLoading(true);
     setError('');
     
+    Logger.info('🔐 Starting sign-in process...');
+    Logger.info('📧 Email:', formData.email);
+    Logger.info('🔒 Remember me:', rememberMe);
+    Logger.info('🌍 Environment:', process.env.REACT_APP_ENVIRONMENT || 'production');
+    Logger.info('🏗️ API Endpoint:', process.env.REACT_APP_API_ENDPOINT);
+    Logger.info('👤 User Pool ID:', process.env.REACT_APP_USER_POOL_ID);
+    Logger.info('🔑 Client ID:', process.env.REACT_APP_USER_POOL_WEB_CLIENT_ID);
+    
     try {
+      Logger.info('📤 Sending sign-in request to Cognito...');
       const result = await signIn({
         username: formData.email,
         password: formData.password,
@@ -154,24 +163,46 @@ function SimpleAuth() {
         }
       });
       
+      Logger.info('📥 Sign-in response received:', result);
+      
       if (result.isSignedIn) {
+        Logger.info('✅ Sign-in successful!');
+        
         // Handle remember me preference
         if (rememberMe) {
           sessionManager.setRememberMe(formData.email);
+          Logger.info('💾 Email saved for remember me');
         } else {
           sessionManager.clearRememberMe();
+          Logger.info('🗑️ Remember me cleared');
         }
         
         // Show loading screen before navigation
         showLoading("Welcome back!", "Setting up your workspace", 2000);
+        Logger.info('🚀 Navigating to:', returnTo);
         
         // Navigate after loading screen
         setTimeout(() => {
           navigate(returnTo, { replace: true });
         }, 2000);
+      } else {
+        Logger.warn('⚠️ Sign-in completed but user not signed in:', result);
       }
     } catch (err) {
-      Logger.error('Sign in error:', err);
+      Logger.error('❌ Sign in error details:');
+      Logger.error('Error object:', err);
+      Logger.error('Error message:', err.message);
+      Logger.error('Error code:', err.code);
+      Logger.error('Error name:', err.name);
+      
+      if (err.response) {
+        Logger.error('Error response:', err.response);
+      }
+      
+      if (err.request) {
+        Logger.error('Error request:', err.request);
+      }
+      
       setError(err.message || 'Failed to sign in');
       setLoading(false);
     }

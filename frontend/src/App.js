@@ -11,14 +11,27 @@ import NotFoundHandler from './components/NotFoundHandler';
 import { LandingPage } from './components/LandingPage';
 import DevModeBanner from './components/DevModeBanner';
 import analytics from './utils/analytics';
-import config from './config';
+import config, { validateConfig } from './config';
+import Logger from './utils/logger';
 
 function App() {
-  // Initialize analytics on app start
+  // Initialize analytics and validate configuration on app start
   useEffect(() => {
+    Logger.info('🚀 JobTailorAI Beta Environment Starting...');
+    
+    // Validate configuration
+    const isConfigValid = validateConfig();
+    if (!isConfigValid) {
+      Logger.error('❌ Configuration validation failed - app may not work correctly');
+    }
+    
+    // Initialize analytics
     if (config.Analytics.enabled) {
       analytics.init();
+      Logger.info('📊 Analytics initialized');
     }
+    
+    Logger.info('✅ App initialization complete');
   }, []);
 
   return (
