@@ -91,6 +91,19 @@ Resources:
       UserPoolName: !Sub 'ResumeOptimizerUserPool-${Environment}'
       AutoVerifiedAttributes:
         - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: terms
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+        - Name: newsletter
+          AttributeDataType: String
+          Required: false
+          Mutable: true
       VerificationMessageTemplate:
         DefaultEmailOption: CONFIRM_WITH_CODE
         EmailSubject: "Welcome to JobTailorAI - Verify Your Email Address"
