@@ -10,6 +10,10 @@ import AuthGuard from './components/AuthGuard';
 import NotFoundHandler from './components/NotFoundHandler';
 import { LandingPage } from './components/LandingPage';
 import DevModeBanner from './components/DevModeBanner';
+import InterviewSetup from './components/InterviewSetup';
+import InterviewRoom from './components/InterviewRoom';
+import InterviewFeedback from './components/InterviewFeedback';
+import InterviewHistory from './components/InterviewHistory';
 import analytics from './utils/analytics';
 import config, { validateConfig } from './config';
 import Logger from './utils/logger';
@@ -59,6 +63,12 @@ function App() {
                 <Route path="/job-description" element={<MainApp />} />
                 <Route path="/results" element={<MainApp />} />
                 <Route path="/profile" element={<Profile />} />
+                
+                {/* Mock Interview Routes */}
+                <Route path="/interview/setup" element={<InterviewSetup />} />
+                <Route path="/interview/room/:sessionId" element={<InterviewRoom />} />
+                <Route path="/interview/feedback/:sessionId" element={<InterviewFeedback />} />
+                <Route path="/interview/history" element={<InterviewHistory />} />
               </Routes>
             </ProtectedRoute>
           } />

@@ -130,7 +130,7 @@ cd backend/lambda-functions/job-url-extractor
 # Install dependencies if requirements.txt exists
 if [ -f "requirements.txt" ]; then
     print_status "Installing dependencies for Job URL Extractor..."
-    pip install -r requirements.txt -t . --quiet
+    python3 -m pip install -r requirements.txt -t . --quiet
 fi
 
 zip -r function.zip *.py 2>/dev/null || true

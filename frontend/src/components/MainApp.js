@@ -14,6 +14,7 @@ import ResumeAssemblyAnimation from './ResumeAssemblyAnimation';
 import FeedbackDialog from './FeedbackDialog';
 import ThankYouDialog from './ThankYouDialog';
 import DevModeBanner from './DevModeBanner';
+import QuickInterviewSetup from './QuickInterviewSetup';
 import devModeDetector from '../utils/devModeDetector';
 // Removed JobTailorIcon import - using inline branding instead
 
@@ -293,6 +294,7 @@ function MainApp() {
   const [saveToProfileDialogOpen, setSaveToProfileDialogOpen] = useState(false);
   const [resumeTitle, setResumeTitle] = useState('');
   const [resumeDescription, setResumeDescription] = useState('');
+  const [interviewSetupOpen, setInterviewSetupOpen] = useState(false);
   const [userSettings, setUserSettings] = useState({
     defaultOutputFormat: 'pdf', // Default fallback
     resumeTemplate: 'professional' // Default template
@@ -2099,6 +2101,16 @@ function MainApp() {
               
               <MenuItem onClick={() => {
                 setProfileMenuAnchor(null);
+                navigate('/app/interview/setup');
+              }}>
+                <ListItemIcon>
+                  <WorkIcon />
+                </ListItemIcon>
+                <ListItemText primary="Mock Interview" />
+              </MenuItem>
+              
+              <MenuItem onClick={() => {
+                setProfileMenuAnchor(null);
                 setContactUsDialogOpen(true);
               }}>
                 <ListItemIcon>
@@ -3580,7 +3592,8 @@ function MainApp() {
                   mt: 2,
                   pt: 2,
                   borderTop: '1px solid',
-                  borderColor: 'divider'
+                  borderColor: 'divider',
+                  flexWrap: 'wrap'
                 }}>
                   <Button 
                     variant="contained" 
@@ -3597,6 +3610,29 @@ function MainApp() {
                     }}
                   >
                     Create Another Resume
+                  </Button>
+                  
+                  <Button 
+                    variant="outlined" 
+                    onClick={() => setInterviewSetupOpen(true)}
+                    startIcon={<WorkIcon />}
+                    size="large"
+                    sx={{
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      py: 1.2,
+                      px: 4,
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      borderColor: '#0A66C2',
+                      color: '#0A66C2',
+                      '&:hover': {
+                        borderColor: '#378FE9',
+                        backgroundColor: 'rgba(10, 102, 194, 0.04)'
+                      }
+                    }}
+                  >
+                    Practice Interview
                   </Button>
                   
                   <Button 
@@ -5107,6 +5143,14 @@ function MainApp() {
         </DialogActions>
       </Dialog>
 
+      {/* Quick Interview Setup Dialog */}
+      <QuickInterviewSetup
+        open={interviewSetupOpen}
+        onClose={() => setInterviewSetupOpen(false)}
+        jobDescription={manualJobDescription}
+        companyName={companyName}
+        resume={optimizedResumeText || resume}
+      />
 
       </Box>
       )}
