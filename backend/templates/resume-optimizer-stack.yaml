@@ -92,17 +92,11 @@ Resources:
       AutoVerifiedAttributes:
         - email
       Schema:
-        - Name: email
-          AttributeDataType: String
-          Required: true
-          Mutable: true
         - Name: terms
           AttributeDataType: String
-          Required: false
           Mutable: true
         - Name: newsletter
           AttributeDataType: String
-          Required: false
           Mutable: true
       VerificationMessageTemplate:
         DefaultEmailOption: CONFIRM_WITH_CODE
