@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Interview Storage</title>
+</head>
+<body>
+    <h1>Interview LocalStorage Test</h1>
+    <button onclick="addTestInterview()">Add Test Interview</button>
+    <button onclick="viewInterviews()">View Saved Interviews</button>
+    <button onclick="clearInterviews()">Clear All Interviews</button>
+    <pre id="output"></pre>
+
+    <script>
+        function addTestInterview() {
+            const testInterview = {
+                sessionId: 'test-' + Date.now(),
+                questions: [
+                    'Tell me about yourself',
+                    'What are your strengths?',
+                    'Where do you see yourself in 5 years?'
+                ],
+                answers: {
+                    0: 'I am a software engineer with 5 years of experience...',
+                    1: 'My strengths include problem-solving and teamwork...',
+                    2: 'In 5 years, I see myself as a senior engineer...'
+                },
+                completedAt: Date.now(),
+                duration: 30,
+                timeSpent: 1200, // 20 minutes
+                answeredCount: 3,
+                totalQuestions: 3
+            };
+
+            const existing = JSON.parse(localStorage.getItem('savedInterviews') || '[]');
+            existing.push(testInterview);
+            localStorage.setItem('savedInterviews', JSON.stringify(existing));
+            
+            document.getElementById('output').textContent = 'Test interview added!\n' + JSON.stringify(testInterview, null, 2);
+        }
+
+        function viewInterviews() {
+            const interviews = localStorage.getItem('savedInterviews');
+            document.getElementById('output').textContent = interviews || 'No interviews found';
+        }
+
+        function clearInterviews() {
+            localStorage.removeItem('savedInterviews');
+            document.getElementById('output').textContent = 'All interviews cleared!';
+        }
+    </script>
+</body>
+</html>

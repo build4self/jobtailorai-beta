@@ -48,14 +48,16 @@ import {
   LinkedIn as LinkedInIcon,
   GitHub as GitHubIcon,
   Language as WebsiteIcon,
-
   ArrowBack as ArrowBackIcon,
   Logout as LogoutIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  School as SchoolIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 // Removed JobTailorIcon import - using inline branding instead
-import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
+import { getCurrentUser, fetchUserAttributes, signOut, fetchAuthSession } from 'aws-amplify/auth';
+import config from '../config';
+import FeedbackDisplay from './FeedbackDisplay';
 
 function Profile() {
   const navigate = useNavigate();
@@ -73,6 +75,8 @@ function Profile() {
     bio: ''
   });
   const [savedResumes, setSavedResumes] = useState([]);
+  const [savedInterviews, setSavedInterviews] = useState([]);
+  const [loadingInterviews, setLoadingInterviews] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resumeToDelete, setResumeToDelete] = useState(null);
@@ -83,11 +87,16 @@ function Profile() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedResumeDetails, setSelectedResumeDetails] = useState(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [selectedInterview, setSelectedInterview] = useState(null);
+  const [showInterviewFeedback, setShowInterviewFeedback] = useState(false);
+  const [deleteInterviewDialogOpen, setDeleteInterviewDialogOpen] = useState(false);
+  const [interviewToDelete, setInterviewToDelete] = useState(null);
 
   // Load user data on component mount
   useEffect(() => {
     loadUserData();
     loadSavedResumes();
+    loadSavedInterviews(); // Preload interviews for instant display
   }, []);
 
   const loadUserData = async () => {
@@ -172,7 +181,8 @@ function Profile() {
 
   const menuItems = [
     { id: 'personal', label: 'Personal Details', icon: <PersonIcon /> },
-    { id: 'resumes', label: 'Saved Resumes', icon: <DescriptionIcon /> }
+    { id: 'resumes', label: 'Saved Resumes', icon: <DescriptionIcon /> },
+    { id: 'interviews', label: 'Saved Interviews', icon: <SchoolIcon /> }
   ];
 
   const renderPersonalDetails = () => (
@@ -1016,6 +1026,180 @@ function Profile() {
     </motion.div>
   );
 
+  // Load saved interviews from localStorage
+  const loadSavedInterviews = () => {
+    setLoadingInterviews(true);
+    try {
+      // Load from localStorage (same as resumes for consistency)
+      const saved = localStorage.getItem('savedInterviews');
+      Logger.info('Loading saved interviews from localStorage:', saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Logger.info('Parsed interviews:', parsed);
+        setSavedInterviews(parsed);
+      } else {
+        Logger.info('No saved interviews found in localStorage');
+        setSavedInterviews([]);
+      }
+    } catch (err) {
+      Logger.error('Error loading saved interviews:', err);
+      setSavedInterviews([]);
+    } finally {
+      setLoadingInterviews(false);
+    }
+  };
+
+  // Delete interview from localStorage
+  const handleDeleteInterview = (sessionId) => {
+    const updatedInterviews = savedInterviews.filter(interview => interview.sessionId !== sessionId);
+    setSavedInterviews(updatedInterviews);
+    localStorage.setItem('savedInterviews', JSON.stringify(updatedInterviews));
+    setDeleteInterviewDialogOpen(false);
+    setInterviewToDelete(null);
+    setSnackbarMessage('Interview deleted successfully!');
+    setSnackbarSeverity('success');
+    setSnackbarOpen(true);
+  };
+
+  // Render saved interviews section
+  const renderSavedInterviews = () => {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: '#0A66C2' }}>
+              Saved Interviews
+            </Typography>
+            <Chip 
+              label={`${savedInterviews.length} interview${savedInterviews.length !== 1 ? 's' : ''} saved`}
+              sx={{ bgcolor: '#e3f2fd', color: '#0A66C2', fontWeight: 600 }}
+            />
+          </Box>
+
+          {loadingInterviews ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <CircularProgress />
+            </Box>
+          ) : savedInterviews.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <SchoolIcon sx={{ fontSize: 80, color: '#ccc', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No saved interviews yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Start practicing interviews to see them here
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {savedInterviews.map((interview) => (
+                <Card 
+                  key={interview.sessionId}
+                  sx={{ 
+                    p: 3,
+                    borderRadius: 2,
+                    transition: 'all 0.3s',
+                    '&:hover': {
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'start', gap: 2 }}>
+                    {/* Icon */}
+                    <Box sx={{ 
+                      width: 64, 
+                      height: 64, 
+                      borderRadius: 2, 
+                      bgcolor: '#e3f2fd', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <SchoolIcon sx={{ fontSize: 32, color: '#0A66C2' }} />
+                    </Box>
+
+                    {/* Content */}
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            {interview.companyName || 'Company Interview'}
+                          </Typography>
+                          <Button
+                            size="small"
+                            sx={{ 
+                              textTransform: 'none', 
+                              p: 0, 
+                              minWidth: 'auto',
+                              color: '#0A66C2',
+                              '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+                            }}
+                            onClick={() => {
+                              setSelectedInterview(interview);
+                              setShowInterviewFeedback(true);
+                            }}
+                          >
+                            View Details
+                          </Button>
+                        </Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setInterviewToDelete(interview);
+                            setDeleteInterviewDialogOpen(true);
+                          }}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+
+                      <Chip 
+                        label={new Date(interview.completedAt).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mb: 2, borderColor: '#0A66C2', color: '#0A66C2' }}
+                      />
+
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        <strong>Role:</strong> {interview.jobRole || 'Interview Practice'}
+                      </Typography>
+
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Score:</strong>
+                        </Typography>
+                        <Chip 
+                          label={`${interview.feedback?.overallScore || 'N/A'}/10`}
+                          size="small"
+                          color={
+                            interview.feedback?.overallScore >= 7 ? 'success' : 
+                            interview.feedback?.overallScore >= 5 ? 'warning' : 
+                            'error'
+                          }
+                          sx={{ fontWeight: 600, height: 24 }}
+                        />
+                      </Box>
+                    </Box>
+                  </Box>
+                </Card>
+              ))}
+            </Box>
+          )}
+        </Paper>
+      </motion.div>
+    );
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
       {/* Modern Header */}
@@ -1204,6 +1388,7 @@ function Profile() {
             <Box sx={{ minHeight: '70vh' }}>
               {selectedSection === 'personal' && renderPersonalDetails()}
               {selectedSection === 'resumes' && renderSavedResumes()}
+              {selectedSection === 'interviews' && renderSavedInterviews()}
             </Box>
           </Grid>
         </Grid>
@@ -1738,6 +1923,111 @@ function Profile() {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {/* Interview Feedback Dialog */}
+      <Dialog
+        open={showInterviewFeedback}
+        onClose={() => setShowInterviewFeedback(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { height: '90vh' }
+        }}
+      >
+        <DialogContent sx={{ p: 0, height: '100%', overflow: 'hidden' }}>
+          {selectedInterview?.feedback ? (
+            <FeedbackDisplay feedback={selectedInterview.feedback} />
+          ) : (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                No feedback available for this interview
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ borderTop: 1, borderColor: 'divider', p: 2 }}>
+          <Button onClick={() => setShowInterviewFeedback(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Interview Confirmation Dialog */}
+      <Dialog
+        open={deleteInterviewDialogOpen}
+        onClose={() => setDeleteInterviewDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 2 }}>
+          <DeleteIcon sx={{ color: 'error.main', fontSize: 28 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
+            Delete Interview
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Are you sure you want to delete this interview? This action cannot be undone.
+          </Typography>
+          {interviewToDelete && (
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: 'grey.50', 
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'grey.200'
+            }}>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                <strong>Interview Details:</strong>
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                <strong>Company:</strong> {interviewToDelete.companyName || 'Company Interview'}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                <strong>Role:</strong> {interviewToDelete.jobRole || 'Interview Practice'}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Completed:</strong> {new Date(interviewToDelete.completedAt).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button 
+            onClick={() => setDeleteInterviewDialogOpen(false)}
+            variant="outlined"
+            sx={{ 
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              px: 3
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => handleDeleteInterview(interviewToDelete?.sessionId)}
+            variant="contained"
+            color="error"
+            startIcon={<DeleteIcon />}
+            sx={{ 
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              px: 3
+            }}
+          >
+            Delete Interview
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
     </Box>
   );

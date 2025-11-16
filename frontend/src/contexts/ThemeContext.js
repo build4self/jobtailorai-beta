@@ -23,7 +23,7 @@ export const CustomThemeProvider = ({ children }) => {
         const settings = JSON.parse(savedSettings);
         setDarkMode(settings.darkMode || false);
       } catch (error) {
-        console.error('Error loading theme settings:', error);
+        // Silent fail - theme will use default
       }
     }
   }, []);
@@ -37,7 +37,7 @@ export const CustomThemeProvider = ({ children }) => {
           const settings = JSON.parse(savedSettings);
           setDarkMode(settings.darkMode || false);
         } catch (error) {
-          console.error('Error loading theme settings:', error);
+          // Silent fail - theme will use default
         }
       }
     };
@@ -238,7 +238,7 @@ export const CustomThemeProvider = ({ children }) => {
       try {
         settings = JSON.parse(savedSettings);
       } catch (error) {
-        console.error('Error parsing settings:', error);
+        // Silent fail - will use default settings
       }
     }
     

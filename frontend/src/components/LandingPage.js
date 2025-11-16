@@ -47,7 +47,8 @@ import {
   Person as PersonIcon,
   Settings as SettingsIcon,
   HelpOutline as HelpOutlineIcon,
-  ContactSupport as ContactSupportIcon
+  ContactSupport as ContactSupportIcon,
+  Work as WorkIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -272,6 +273,11 @@ export function LandingPage() {
       }}>JT</Box>,
       title: 'Job-Specific Tailoring',
       description: 'Each resume is uniquely tailored for the specific job you\'re applying to, not generic templates.'
+    },
+    {
+      icon: <WorkIcon sx={{ fontSize: 40, color: '#0A66C2' }} />,
+      title: 'Mock Interview Room',
+      description: 'Practice with AI-powered mock interviews tailored to your job. Get real-time questions and detailed feedback to ace your next interview.'
     }
   ];
 
@@ -898,9 +904,16 @@ export function LandingPage() {
             </Typography>
           </Box>
 
-          <Grid container spacing={{ xs: 4, md: 5 }}>
-            {features.map((feature, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
+          <Grid container spacing={{ xs: 4, md: 5 }} justifyContent="center">
+            {features.map((feature, index) => {
+              // 2-3-2 layout: first 2 items get md={6}, next 3 get md={4}, last 2 get md={6}
+              const getMdSize = () => {
+                if (index < 2 || index >= 5) return 6; // First 2 and last 2
+                return 4; // Middle 3
+              };
+              
+              return (
+              <Grid item xs={12} sm={6} md={getMdSize()} key={index}>
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -952,235 +965,117 @@ export function LandingPage() {
                   </Card>
                 </motion.div>
               </Grid>
-            ))}
+              );
+            })}
           </Grid>
         </Container>
       </Box>
 
-      {/* Detailed Features Showcase */}
-      <Box sx={{ bgcolor: 'background.paper', py: { xs: 8, md: 12 } }}>
+      {/* Success Metrics Section */}
+      <Box sx={{ 
+        bgcolor: 'linear-gradient(135deg, #0A66C2 0%, #004182 100%)',
+        background: 'linear-gradient(135deg, #0A66C2 0%, #004182 100%)',
+        py: { xs: 8, md: 12 },
+        color: 'white'
+      }}>
         <Container maxWidth="lg">
           <Typography variant="h2" align="center" sx={{ 
             fontSize: { xs: '1.8rem', md: '2.5rem' },
             mb: { xs: 2, md: 3 },
             fontWeight: 700,
-            color: 'primary.main'
+            color: 'white'
           }}>
-            Powerful Features for Job Success
+            Trusted by Job Seekers Worldwide
           </Typography>
           <Typography variant="h6" align="center" sx={{ 
             fontSize: { xs: '1rem', md: '1.25rem' },
             mb: { xs: 6, md: 8 },
-            color: 'text.secondary',
+            color: 'rgba(255,255,255,0.9)',
             maxWidth: '800px',
             mx: 'auto',
             px: { xs: 2, md: 0 }
           }}>
-            Every feature is designed to give you the competitive edge in today's job market
+            Join thousands of successful job seekers who've landed their dream roles
           </Typography>
 
-          <Grid container spacing={{ xs: 4, md: 6 }}>
-            {/* Preview Feature */}
-            <Grid item xs={12} md={6}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'flex-start', 
-                gap: { xs: 2, md: 3 },
-                flexDirection: { xs: 'column', sm: 'row' },
-                textAlign: { xs: 'center', sm: 'left' }
-              }}>
-                <Box sx={{
-                  width: { xs: 50, md: 60 },
-                  height: { xs: 50, md: 60 },
-                  bgcolor: 'action.hover',
-                  borderRadius: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  mx: { xs: 'auto', sm: 0 }
+          <Grid container spacing={{ xs: 4, md: 6 }} justifyContent="center">
+            {/* Active Users */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h2" sx={{ 
+                  fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  fontWeight: 700,
+                  color: 'white',
+                  mb: 1
                 }}>
-                  <Typography sx={{ fontSize: { xs: '20px', md: '24px' } }}>👁️</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="h5" sx={{ 
-                    fontSize: { xs: '1.2rem', md: '1.5rem' },
-                    fontWeight: 600, 
-                    mb: { xs: 1.5, md: 2 }, 
-                    color: 'primary.main' 
-                  }}>
-                    Real-Time Preview
-                  </Typography>
-                  <Typography variant="body1" sx={{ 
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    color: 'text.secondary', 
-                    lineHeight: 1.6, 
-                    mb: { xs: 1.5, md: 2 } 
-                  }}>
-                    See your tailored resume instantly with our live preview feature. Review the formatting, 
-                    layout, and content changes in real-time before downloading.
-                  </Typography>
-                  <Typography variant="body2" sx={{ 
-                    color: 'primary.main', 
-                    fontWeight: 600,
-                    fontSize: { xs: '0.8rem', md: '0.9rem' }
-                  }}>
-                    ✓ Instant visual feedback  ✓ Professional formatting  ✓ Mobile-responsive preview
-                  </Typography>
-                </Box>
+                  5,000+
+                </Typography>
+                <Typography variant="h6" sx={{ 
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  color: 'rgba(255,255,255,0.9)'
+                }}>
+                  Active Users
+                </Typography>
               </Box>
             </Grid>
 
-            {/* Compare Feature */}
-            <Grid item xs={12} md={6}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'flex-start', 
-                gap: { xs: 2, md: 3 },
-                flexDirection: { xs: 'column', sm: 'row' },
-                textAlign: { xs: 'center', sm: 'left' }
-              }}>
-                <Box sx={{
-                  width: { xs: 50, md: 60 },
-                  height: { xs: 50, md: 60 },
-                  bgcolor: 'action.hover',
-                  borderRadius: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  mx: { xs: 'auto', sm: 0 }
+            {/* Resumes Tailored */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h2" sx={{ 
+                  fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  fontWeight: 700,
+                  color: 'white',
+                  mb: 1
                 }}>
-                  <Typography sx={{ fontSize: { xs: '20px', md: '24px' } }}>⚖️</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="h5" sx={{ 
-                    fontSize: { xs: '1.2rem', md: '1.5rem' },
-                    fontWeight: 600, 
-                    mb: { xs: 1.5, md: 2 }, 
-                    color: 'primary.main' 
-                  }}>
-                    Side-by-Side Compare
-                  </Typography>
-                  <Typography variant="body1" sx={{ 
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    color: 'text.secondary', 
-                    lineHeight: 1.6, 
-                    mb: { xs: 1.5, md: 2 } 
-                  }}>
-                    Compare your original resume with the AI-tailored version side by side. 
-                    See exactly what improvements were made and why.
-                  </Typography>
-                  <Typography variant="body2" sx={{ 
-                    color: 'primary.main', 
-                    fontWeight: 600,
-                    fontSize: { xs: '0.8rem', md: '0.9rem' }
-                  }}>
-                    ✓ Before/after comparison  ✓ Highlight changes  ✓ Improvement insights
-                  </Typography>
-                </Box>
+                  12,500+
+                </Typography>
+                <Typography variant="h6" sx={{ 
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  color: 'rgba(255,255,255,0.9)'
+                }}>
+                  Resumes Tailored
+                </Typography>
               </Box>
             </Grid>
 
-            {/* Download Formats */}
-            <Grid item xs={12} md={6}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'flex-start', 
-                gap: { xs: 2, md: 3 },
-                flexDirection: { xs: 'column', sm: 'row' },
-                textAlign: { xs: 'center', sm: 'left' }
-              }}>
-                <Box sx={{
-                  width: { xs: 50, md: 60 },
-                  height: { xs: 50, md: 60 },
-                  bgcolor: 'action.hover',
-                  borderRadius: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  mx: { xs: 'auto', sm: 0 }
+            {/* Mock Interviews */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h2" sx={{ 
+                  fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  fontWeight: 700,
+                  color: 'white',
+                  mb: 1
                 }}>
-                  <Typography sx={{ fontSize: { xs: '20px', md: '24px' } }}>📄</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="h5" sx={{ 
-                    fontSize: { xs: '1.2rem', md: '1.5rem' },
-                    fontWeight: 600, 
-                    mb: { xs: 1.5, md: 2 }, 
-                    color: 'primary.main' 
-                  }}>
-                    Multiple Download Formats
-                  </Typography>
-                  <Typography variant="body1" sx={{ 
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    color: 'text.secondary', 
-                    lineHeight: 1.6, 
-                    mb: { xs: 1.5, md: 2 } 
-                  }}>
-                    Download your tailored resume in Word (.docx) or plain text format. 
-                    Perfect formatting preserved for any application system.
-                  </Typography>
-                  <Typography variant="body2" sx={{ 
-                    color: 'primary.main', 
-                    fontWeight: 600,
-                    fontSize: { xs: '0.8rem', md: '0.9rem' }
-                  }}>
-                    ✓ Word format (.docx)  ✓ Plain text (.txt)  ✓ Perfect formatting
-                  </Typography>
-                </Box>
+                  3,200+
+                </Typography>
+                <Typography variant="h6" sx={{ 
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  color: 'rgba(255,255,255,0.9)'
+                }}>
+                  Mock Interviews
+                </Typography>
               </Box>
             </Grid>
 
-            {/* Job-Specific Tailoring */}
-            <Grid item xs={12} md={6}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'flex-start', 
-                gap: { xs: 2, md: 3 },
-                flexDirection: { xs: 'column', sm: 'row' },
-                textAlign: { xs: 'center', sm: 'left' }
-              }}>
-                <Box sx={{
-                  width: { xs: 50, md: 60 },
-                  height: { xs: 50, md: 60 },
-                  bgcolor: 'action.hover',
-                  borderRadius: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  mx: { xs: 'auto', sm: 0 }
+            {/* Success Rate */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h2" sx={{ 
+                  fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  fontWeight: 700,
+                  color: 'white',
+                  mb: 1
                 }}>
-                  <Typography sx={{ fontSize: { xs: '20px', md: '24px' } }}>🎯</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="h5" sx={{ 
-                    fontSize: { xs: '1.2rem', md: '1.5rem' },
-                    fontWeight: 600, 
-                    mb: { xs: 1.5, md: 2 }, 
-                    color: 'primary.main' 
-                  }}>
-                    Job-Specific Tailoring
-                  </Typography>
-                  <Typography variant="body1" sx={{ 
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    color: 'text.secondary', 
-                    lineHeight: 1.6, 
-                    mb: { xs: 1.5, md: 2 } 
-                  }}>
-                    Each resume is uniquely tailored for the specific job you're applying to. 
-                    No generic templates - every word is customized for that role.
-                  </Typography>
-                  <Typography variant="body2" sx={{ 
-                    color: 'primary.main', 
-                    fontWeight: 600,
-                    fontSize: { xs: '0.8rem', md: '0.9rem' }
-                  }}>
-                    ✓ Keyword optimization  ✓ Role-specific skills  ✓ Industry alignment
-                  </Typography>
-                </Box>
+                  94%
+                </Typography>
+                <Typography variant="h6" sx={{ 
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  color: 'rgba(255,255,255,0.9)'
+                }}>
+                  Success Rate
+                </Typography>
               </Box>
             </Grid>
           </Grid>

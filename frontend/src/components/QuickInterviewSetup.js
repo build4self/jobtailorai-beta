@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -23,7 +23,7 @@ import Logger from '../utils/logger';
 
 const QuickInterviewSetup = ({ 
   open, 
-  onClose, 
+  onClose, // onClose(interviewData) where interviewData = { sessionId, questions, duration } or null for cancel
   jobDescription, 
   companyName, 
   resume 
@@ -35,6 +35,16 @@ const QuickInterviewSetup = ({
   const [setupProgress, setSetupProgress] = useState(0);
   const [setupMessage, setSetupMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setLoading(false);
+      setSetupProgress(0);
+      setSetupMessage('');
+      setError('');
+    }
+  }, [open]);
 
   const handleStart = async () => {
     setError('');
@@ -121,22 +131,28 @@ const QuickInterviewSetup = ({
         throw new Error('Failed to start interview');
       }
 
-      setSetupProgress(90);
-      setSetupMessage('Preparing interview room...');
-
-      // Small delay for UX
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const startData = await startResponse.json();
+      
+      // Verify we got questions
+      if (!startData.questions || startData.questions.length === 0) {
+        throw new Error('No questions generated');
+      }
 
       setSetupProgress(100);
-      setSetupMessage('Ready!');
+      setSetupMessage('Launching interview room...');
 
-      Logger.info('Interview ready, navigating to room');
+      Logger.info('Interview ready with questions loaded');
 
-      // Navigate to interview room
-      setTimeout(() => {
-        navigate(`/app/interview/room/${sessionId}`);
-        onClose();
-      }, 500);
+      // Brief pause to show completion, then transition smoothly
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Pass sessionId and interview data back to parent to open interview dialog
+      onClose({
+        sessionId,
+        questions: startData.questions,
+        duration: startData.duration,
+        totalQuestions: startData.totalQuestions
+      });
 
     } catch (err) {
       Logger.error('Error setting up interview:', err);
@@ -158,9 +174,12 @@ const QuickInterviewSetup = ({
   return (
     <Dialog 
       open={open} 
-      onClose={loading ? undefined : onClose}
+      onClose={loading ? undefined : () => onClose(null)}
       maxWidth="sm"
       fullWidth
+      TransitionProps={{
+        timeout: 400
+      }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <School color="primary" />
@@ -237,7 +256,10 @@ const QuickInterviewSetup = ({
                 valueLabelFormat={(value) => `${value}m`}
               />
               <Typography variant="caption" color="text.secondary">
-                Approximately {Math.ceil(duration / 5)} questions
+                {(() => {
+                  const questionMap = { 5: 1, 15: 3, 30: 6, 45: 7, 60: 9, 90: 12 };
+                  return questionMap[duration] || Math.ceil(duration / 5);
+                })()} questions
               </Typography>
             </Box>
           </>
@@ -247,7 +269,7 @@ const QuickInterviewSetup = ({
       <DialogActions>
         {!loading && (
           <>
-            <Button onClick={onClose}>
+            <Button onClick={() => onClose(null)}>
               Cancel
             </Button>
             <Button

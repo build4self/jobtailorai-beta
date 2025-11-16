@@ -11,22 +11,13 @@ import {
   Chip,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  LinearProgress,
-  Grid,
-  Card,
-  CardContent
+  AccordionDetails
 } from '@mui/material';
 import {
   ExpandMore,
-  TrendingUp,
-  TrendingDown,
-  School,
   EmojiEvents,
-  Lightbulb
+  School
 } from '@mui/icons-material';
-import { fetchAuthSession } from 'aws-amplify/auth';
-import config from '../config';
 import Logger from '../utils/logger';
 
 const InterviewFeedback = () => {
@@ -41,30 +32,35 @@ const InterviewFeedback = () => {
     fetchFeedback();
   }, [sessionId]);
 
-  const fetchFeedback = async () => {
+  const fetchFeedback = () => {
     setLoading(true);
     setError('');
 
     try {
-      const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken?.toString();
+      // Load interview session from localStorage
+      const savedInterviews = JSON.parse(localStorage.getItem('savedInterviews') || '[]');
+      const interviewSession = savedInterviews.find(interview => interview.sessionId === sessionId);
 
-      const response = await fetch(`${config.API.REST.resumeOptimizer.endpoint}/interview/feedback`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ sessionId })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch feedback');
+      if (!interviewSession) {
+        throw new Error('Interview session not found');
       }
 
-      const data = await response.json();
-      setFeedback(data.feedback);
-      Logger.info('Feedback loaded');
+      // Generate feedback from the saved session data
+      const generatedFeedback = {
+        sessionId: interviewSession.sessionId,
+        completedAt: interviewSession.completedAt,
+        duration: interviewSession.duration,
+        timeSpent: interviewSession.timeSpent,
+        totalQuestions: interviewSession.totalQuestions,
+        answeredCount: interviewSession.answeredCount,
+        questions: interviewSession.questions,
+        answers: interviewSession.answers,
+        overallScore: Math.round((interviewSession.answeredCount / interviewSession.totalQuestions) * 10),
+        completionRate: Math.round((interviewSession.answeredCount / interviewSession.totalQuestions) * 100)
+      };
+
+      setFeedback(generatedFeedback);
+      Logger.info('Feedback loaded from localStorage');
 
     } catch (err) {
       Logger.error('Error fetching feedback:', err);
@@ -104,138 +100,33 @@ const InterviewFeedback = () => {
       {/* Overall Score */}
       <Paper elevation={3} sx={{ p: 4, mb: 3, textAlign: 'center' }}>
         <Typography variant="h4" gutterBottom>
-          Interview Performance
+          Interview Summary
         </Typography>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, my: 3 }}>
           <EmojiEvents sx={{ fontSize: 60, color: 'gold' }} />
           <Typography variant="h2" color={getScoreColor(feedback.overallScore)}>
-            {feedback.overallScore}/10
+            {feedback.completionRate}%
           </Typography>
         </Box>
         <Typography variant="body1" color="text.secondary">
-          {feedback.summary}
+          You answered {feedback.answeredCount} out of {feedback.totalQuestions} questions
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Time spent: {Math.floor(feedback.timeSpent / 60)}:{(feedback.timeSpent % 60).toString().padStart(2, '0')} / {feedback.duration}:00
         </Typography>
       </Paper>
 
-      {/* Skills Breakdown */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Communication
-              </Typography>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Clarity: {feedback.communicationSkills?.clarity}/10
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={feedback.communicationSkills?.clarity * 10}
-                  color={getScoreColor(feedback.communicationSkills?.clarity)}
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-              </Box>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Conciseness: {feedback.communicationSkills?.conciseness}/10
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={feedback.communicationSkills?.conciseness * 10}
-                  color={getScoreColor(feedback.communicationSkills?.conciseness)}
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  Confidence: {feedback.communicationSkills?.confidence}/10
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={feedback.communicationSkills?.confidence * 10}
-                  color={getScoreColor(feedback.communicationSkills?.confidence)}
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Technical Accuracy
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Typography variant="h3" color={getScoreColor(feedback.technicalAccuracy?.score)}>
-                  {feedback.technicalAccuracy?.score}/10
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                {feedback.technicalAccuracy?.feedback}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Company Fit
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Typography variant="h3" color={getScoreColor(feedback.companyFit?.score)}>
-                  {feedback.companyFit?.score}/10
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                {feedback.companyFit?.feedback}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Strengths */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TrendingUp color="success" />
-          Strengths
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {feedback.strengths?.map((strength, index) => (
-            <Chip key={index} label={strength} color="success" variant="outlined" />
-          ))}
-        </Box>
-      </Paper>
-
-      {/* Areas for Improvement */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TrendingDown color="warning" />
-          Areas for Improvement
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {feedback.areasForImprovement?.map((area, index) => (
-            <Chip key={index} label={area} color="warning" variant="outlined" />
-          ))}
-        </Box>
-      </Paper>
-
-      {/* Question-by-Question Feedback */}
+      {/* Questions and Answers */}
       <Typography variant="h5" gutterBottom sx={{ mt: 4, mb: 2 }}>
-        Detailed Question Feedback
+        Your Responses
       </Typography>
-      {feedback.questionFeedback?.map((qf, index) => (
+      {feedback.questions?.map((question, index) => (
         <Accordion key={index} sx={{ mb: 2 }}>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
               <Chip
-                label={`${qf.score}/10`}
-                color={getScoreColor(qf.score)}
+                label={feedback.answers[index] ? 'Answered' : 'Skipped'}
+                color={feedback.answers[index] ? 'success' : 'default'}
                 size="small"
               />
               <Typography>Question {index + 1}</Typography>
@@ -247,66 +138,50 @@ const InterviewFeedback = () => {
                 Question:
               </Typography>
               <Typography variant="body2" paragraph>
-                {qf.question}
+                {question}
               </Typography>
 
               <Typography variant="subtitle2" color="primary" gutterBottom>
                 Your Answer:
               </Typography>
-              <Typography variant="body2" paragraph>
-                {qf.yourAnswer}
-              </Typography>
-
-              <Typography variant="subtitle2" color="primary" gutterBottom>
-                Feedback:
-              </Typography>
-              <Typography variant="body2" paragraph>
-                {qf.feedback}
-              </Typography>
-
-              <Typography variant="subtitle2" color="success.main" gutterBottom>
-                Suggested Improvement:
-              </Typography>
-              <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                {qf.suggestedAnswer}
+              <Typography variant="body2" paragraph sx={{ 
+                fontStyle: feedback.answers[index] ? 'normal' : 'italic',
+                color: feedback.answers[index] ? 'text.primary' : 'text.secondary'
+              }}>
+                {feedback.answers[index] || 'No answer provided'}
               </Typography>
             </Box>
           </AccordionDetails>
         </Accordion>
       ))}
 
-      {/* Recommendations */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Lightbulb color="primary" />
-          Recommendations
+      {/* Actions */}
+      <Paper elevation={2} sx={{ p: 3, mt: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Save This Interview
         </Typography>
-        <Box component="ul" sx={{ pl: 2 }}>
-          {feedback.recommendations?.map((rec, index) => (
-            <Typography component="li" key={index} variant="body2" sx={{ mb: 1 }}>
-              {rec}
-            </Typography>
-          ))}
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Save this interview to your profile to review it later and track your progress.
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/app/profile')}
+          >
+            View Profile
+          </Button>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => {
+              // Interview is already saved to localStorage in InterviewRoom
+              navigate('/app/profile');
+            }}
+          >
+            Go to Saved Interviews
+          </Button>
         </Box>
       </Paper>
-
-      {/* Actions */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 4 }}>
-        <Button
-          variant="outlined"
-          onClick={() => navigate('/app/interview/history')}
-        >
-          View History
-        </Button>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<School />}
-          onClick={() => navigate('/app/interview/setup')}
-        >
-          Practice Again
-        </Button>
-      </Box>
     </Container>
   );
 };

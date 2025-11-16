@@ -11,10 +11,11 @@ import SettingsDialog from './SettingsDialog';
 import FormatSelector from './FormatSelector';
 import StylishBackButton from './StylishBackButton';
 import ResumeAssemblyAnimation from './ResumeAssemblyAnimation';
-import FeedbackDialog from './FeedbackDialog';
+
 import ThankYouDialog from './ThankYouDialog';
 import DevModeBanner from './DevModeBanner';
 import QuickInterviewSetup from './QuickInterviewSetup';
+import InterviewDialog from './InterviewDialog';
 import devModeDetector from '../utils/devModeDetector';
 // Removed JobTailorIcon import - using inline branding instead
 
@@ -55,7 +56,6 @@ import {
 import { 
   CloudUpload as CloudUploadIcon,
   Description as DescriptionIcon,
-
   Download as DownloadIcon,
   Logout as LogoutIcon,
   CheckCircle as CheckCircleIcon,
@@ -76,6 +76,7 @@ import {
   Work as WorkIcon,
   Schedule as ScheduleIcon,
   ArrowDropDown as ArrowDropDownIcon,
+  School,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
@@ -295,6 +296,8 @@ function MainApp() {
   const [resumeTitle, setResumeTitle] = useState('');
   const [resumeDescription, setResumeDescription] = useState('');
   const [interviewSetupOpen, setInterviewSetupOpen] = useState(false);
+  const [interviewSessionId, setInterviewSessionId] = useState(null);
+  const [interviewData, setInterviewData] = useState(null); // Store questions and duration
   const [userSettings, setUserSettings] = useState({
     defaultOutputFormat: 'pdf', // Default fallback
     resumeTemplate: 'professional' // Default template
@@ -308,9 +311,6 @@ function MainApp() {
   const [coverLetterText, setCoverLetterText] = useState(''); // Cover letter state
   const [coverLetterDialogOpen, setCoverLetterDialogOpen] = useState(false); // Cover letter dialog state
   
-  // Feedback dialog state
-  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [feedbackShownThisSession, setFeedbackShownThisSession] = useState(false);
   const [thankYouDialogOpen, setThankYouDialogOpen] = useState(false);
   const resultsPageTimerRef = useRef(null);
   const [parsingFailedDialogOpen, setParsingFailedDialogOpen] = useState(false);
@@ -332,47 +332,7 @@ function MainApp() {
 
 
 
-  // Feedback handling
-  const handleFeedbackSubmit = (feedbackData) => {
-    if (feedbackData.type === 'rating') {
-      analytics.trackFeedback('rating_submitted', {
-        rating: feedbackData.rating,
-        step: feedbackData.step,
-        trigger_type: feedbackData.manual ? 'manual' : 'automatic'
-      });
-    } else if (feedbackData.type === 'detailed_feedback') {
-      analytics.trackFeedback('detailed_submitted', {
-        rating: feedbackData.rating,
-        categories: feedbackData.categories,
-        feedback_text: feedbackData.feedback_text,
-        email: feedbackData.email,
-        step: feedbackData.step,
-        trigger_type: feedbackData.manual ? 'manual' : 'automatic'
-      });
-    }
-    
-    // Show thank you dialog after any feedback submission with smooth transition
-    setTimeout(() => {
-      setThankYouDialogOpen(true);
-      setTimeout(() => {
-        setThankYouDialogOpen(false);
-      }, 3000);
-    }, 200); // Small delay for smooth transition
-  };
 
-  const handleFeedbackClose = () => {
-    analytics.trackFeedback('dismissed');
-    setFeedbackDialogOpen(false);
-  };
-
-  const showFeedbackDialog = useCallback(() => {
-    // Only show feedback if not shown this session
-    if (!feedbackShownThisSession) {
-      analytics.trackFeedback('shown');
-      setFeedbackDialogOpen(true);
-      setFeedbackShownThisSession(true);
-    }
-  }, [feedbackShownThisSession]);
 
 
 
@@ -586,31 +546,7 @@ function MainApp() {
   const activeStep = getCurrentStep();
   const steps = ['Upload Resume', 'Enter Job Details', 'Get Tailored Resume'];
 
-  // Timer effect for showing feedback after 1 minute on results page
-  useEffect(() => {
-    // Clear any existing timer first
-    if (resultsPageTimerRef.current) {
-      clearTimeout(resultsPageTimerRef.current);
-      resultsPageTimerRef.current = null;
-    }
 
-    // Start timer when results are displayed (activeStep === 2 && result && !isProcessing)
-    if (activeStep === 2 && result && !isProcessing && !error && !feedbackShownThisSession) {
-      const timer = setTimeout(() => {
-        showFeedbackDialog();
-      }, 60 * 1000); // 1 minute in milliseconds
-      
-      resultsPageTimerRef.current = timer;
-      
-      // Cleanup function
-      return () => {
-        if (resultsPageTimerRef.current) {
-          clearTimeout(resultsPageTimerRef.current);
-          resultsPageTimerRef.current = null;
-        }
-      };
-    }
-  }, [activeStep, result, isProcessing, error, feedbackShownThisSession, showFeedbackDialog]);
 
   // Load user settings from localStorage
   const loadUserSettings = () => {
@@ -638,7 +574,7 @@ function MainApp() {
         const isDev = envInfo.isDevelopment || envInfo.frontend === 'LOCAL';
         setIsDevMode(isDev);
       } catch (error) {
-        console.warn('Failed to detect dev mode:', error);
+        Logger.warn('Failed to detect dev mode:', error);
         setIsDevMode(false);
       }
     };
@@ -2099,16 +2035,7 @@ function MainApp() {
                 <ListItemText primary="FAQs & Help" />
               </MenuItem>
               
-              <MenuItem onClick={() => {
-                setProfileMenuAnchor(null);
-                navigate('/app/interview/setup');
-              }}>
-                <ListItemIcon>
-                  <WorkIcon />
-                </ListItemIcon>
-                <ListItemText primary="Mock Interview" />
-              </MenuItem>
-              
+
               <MenuItem onClick={() => {
                 setProfileMenuAnchor(null);
                 setContactUsDialogOpen(true);
@@ -2525,36 +2452,59 @@ function MainApp() {
                 
 
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                   <StylishBackButton 
                     onClick={() => navigate('/app/upload')}
                   >
                     Back
                   </StylishBackButton>
-                  <Button 
-                    variant="contained"
-                    disabled={
-                      // Job Title is always required
-                      !jobTitle.trim() ||
-                      // Company Name required when Generate CV is enabled
-                      (generateCV && !companyName.trim())
-                    }
-                    onClick={handleOptimize}
-                    size="medium"
-                    sx={{
-                      backgroundColor: '#0A66C2',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      borderRadius: '20px',
-                      padding: '8px 24px',
-                      textTransform: 'none',
-                      '&:hover': {
-                        backgroundColor: '#004182',
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button 
+                      variant="contained"
+                      disabled={
+                        // Job Title is always required
+                        !jobTitle.trim() ||
+                        // Company Name required when Generate CV is enabled
+                        (generateCV && !companyName.trim())
                       }
-                    }}
-                  >
-                    Tailor Resume
-                  </Button>
+                      onClick={handleOptimize}
+                      size="medium"
+                      sx={{
+                        backgroundColor: '#0A66C2',
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        borderRadius: '20px',
+                        padding: '8px 24px',
+                        textTransform: 'none',
+                        '&:hover': {
+                          backgroundColor: '#004182',
+                        }
+                      }}
+                    >
+                      Tailor Resume
+                    </Button>
+                    <Button 
+                      variant="outlined"
+                      disabled={!jobTitle.trim()}
+                      onClick={() => setInterviewSetupOpen(true)}
+                      size="medium"
+                      startIcon={<School />}
+                      sx={{
+                        borderColor: '#0A66C2',
+                        color: '#0A66C2',
+                        fontWeight: 600,
+                        borderRadius: '20px',
+                        padding: '8px 24px',
+                        textTransform: 'none',
+                        '&:hover': {
+                          borderColor: '#004182',
+                          backgroundColor: 'rgba(10, 102, 194, 0.04)',
+                        }
+                      }}
+                    >
+                      Practice Interview
+                    </Button>
+                  </Box>
                 </Box>
               </motion.div>
             )}
@@ -3615,6 +3565,7 @@ function MainApp() {
                   <Button 
                     variant="outlined" 
                     onClick={() => setInterviewSetupOpen(true)}
+                    disabled={interviewSetupOpen || !!interviewSessionId}
                     startIcon={<WorkIcon />}
                     size="large"
                     sx={{
@@ -3731,13 +3682,6 @@ function MainApp() {
       />
 
       {/* Feedback Dialog */}
-      <FeedbackDialog
-        open={feedbackDialogOpen}
-        onClose={handleFeedbackClose}
-        onSubmit={handleFeedbackSubmit}
-        manual={false}
-      />
-
       {/* Thank You Dialog */}
       <ThankYouDialog
         open={thankYouDialogOpen}
@@ -5145,10 +5089,39 @@ function MainApp() {
 
       {/* Quick Interview Setup Dialog */}
       <QuickInterviewSetup
-        open={interviewSetupOpen}
-        onClose={() => setInterviewSetupOpen(false)}
+        open={interviewSetupOpen && !interviewSessionId}
+        onClose={(data) => {
+          if (data && data.sessionId) {
+            // Store interview data (questions, duration, etc.)
+            setInterviewData(data);
+            // Set session ID to open interview dialog
+            setInterviewSessionId(data.sessionId);
+            // Close setup dialog after a minimal delay for smooth transition
+            setTimeout(() => setInterviewSetupOpen(false), 150);
+          } else {
+            // User cancelled - close immediately
+            setInterviewSetupOpen(false);
+          }
+        }}
         jobDescription={manualJobDescription}
         companyName={companyName}
+        resume={optimizedResumeText || resume}
+      />
+
+      {/* Interview Dialog */}
+      <InterviewDialog
+        open={!!interviewSessionId}
+        onClose={(completed) => {
+          setInterviewSessionId(null);
+          setInterviewData(null);
+          // No snackbar notification needed - user sees completion dialog
+        }}
+        sessionId={interviewSessionId}
+        initialQuestions={interviewData?.questions}
+        initialDuration={interviewData?.duration}
+        jobDescription={manualJobDescription}
+        companyName={companyName}
+        jobTitle={jobTitle}
         resume={optimizedResumeText || resume}
       />
 
