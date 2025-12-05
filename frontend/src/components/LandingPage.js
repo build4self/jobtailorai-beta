@@ -806,7 +806,7 @@ export function LandingPage() {
                 style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
               >
                 <DemoVideo 
-                  videoUrl="https://jobtailor-assets.s3.amazonaws.com/videos/demo-video.mp4"
+                  videoUrl="https://jobtailor-assets.s3.amazonaws.com/videos/JobTailorAI-Career-Demo-HQ.mp4"
                   autoPlay={false}
                   showControls={true}
                 />
